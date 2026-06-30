@@ -22,11 +22,7 @@ pipeline {
 
         stage('Terraform Init') {
             steps {
-                withCredentials([usernamePassword(
-                    credentialsId: 'AWS-CLI',
-                    usernameVariable: 'AWS_ACCESS_KEY_ID',
-                    passwordVariable: 'AWS_SECRET_ACCESS_KEY'
-                )]) {
+                withAWS(credentials: 'AWS-CLI', region: 'us-east-1') {
                     sh 'terraform init'
                 }
             }
@@ -40,11 +36,7 @@ pipeline {
 
         stage('Terraform Plan') {
             steps {
-                withCredentials([usernamePassword(
-                    credentialsId: 'AWS-CLI',
-                    usernameVariable: 'AWS_ACCESS_KEY_ID',
-                    passwordVariable: 'AWS_SECRET_ACCESS_KEY'
-                )]) {
+                withAWS(credentials: 'AWS-CLI', region: 'us-east-1') {
                     sh 'terraform plan -out=tfplan'
                 }
             }
@@ -58,11 +50,7 @@ pipeline {
 
         stage('Terraform Apply') {
             steps {
-                withCredentials([usernamePassword(
-                    credentialsId: 'AWS-CLI',
-                    usernameVariable: 'AWS_ACCESS_KEY_ID',
-                    passwordVariable: 'AWS_SECRET_ACCESS_KEY'
-                )]) {
+                withAWS(credentials: 'AWS-CLI', region: 'us-east-1') {
                     sh 'terraform apply -auto-approve tfplan'
                 }
             }
