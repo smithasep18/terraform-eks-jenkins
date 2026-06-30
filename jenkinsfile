@@ -17,14 +17,13 @@ pipeline {
             steps {
                 sh 'terraform version'
                 sh 'aws --version'
+                sh 'aws sts get-caller-identity'
             }
         }
 
         stage('Terraform Init') {
             steps {
-                withAWS(credentials: 'AWS-CLI', region: 'us-east-1') {
-                    sh 'terraform init'
-                }
+                sh 'terraform init'
             }
         }
 
@@ -36,9 +35,7 @@ pipeline {
 
         stage('Terraform Plan') {
             steps {
-                withAWS(credentials: 'AWS-CLI', region: 'us-east-1') {
-                    sh 'terraform plan -out=tfplan'
-                }
+                sh 'terraform plan -out=tfplan'
             }
         }
 
@@ -50,9 +47,7 @@ pipeline {
 
         stage('Terraform Apply') {
             steps {
-                withAWS(credentials: 'AWS-CLI', region: 'us-east-1') {
-                    sh 'terraform apply -auto-approve tfplan'
-                }
+                sh 'terraform apply -auto-approve tfplan'
             }
         }
     }
