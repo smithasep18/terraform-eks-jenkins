@@ -1,71 +1,57 @@
+provider "aws" {
+  region = local.region
+}
+
+data "aws_availability_zones" "available" {
+  # Exclude local zones
+  filter {
+    name   = "opt-in-status"
+    values = ["opt-in-not-required"]
+  }
+}
+
+locals {
+  name   = "demo-eks"
+  region = "us-east-1"
+
+  vpc_cidr = "10.0.0.0/16"
+  azs      = slice(data.aws_availability_zones.available.names, 0, 3)
+
+  tags = {
+    Example    = local.name
+    GithubRepo = "terraform-aws-eks"
+    GithubOrg  = "terraform-aws-modules"
+  }
+}
+
+################################################################################
+# VPC
+################################################################################
+
 module "vpc" {
+  source  = "terraform-aws-modules/vpc/aws"
+  version = "~> 6.0"
 
-  source = "terraform-aws-modules/vpc/aws"
+  name = local.name
+  cidr = local.vpc_cidr
 
-  version = "5.8.1"
-
-  name = var.vpc_name
-
-  cidr = "10.0.0.0/16"
-
-  azs = [
-    "us-east-1a",
-    "us-east-1b",
-    "us-east-1c"
-  ]
-
-  private_subnets = [
-    "10.0.1.0/24",
-    "10.0.2.0/24",
-    "10.0.3.0/24"
-  ]
-
-  public_subnets = [
-    "10.0.101.0/24",
-    "10.0.102.0/24",
-    "10.0.103.0/24"
-  ]
+  azs             = local.azs
+  private_subnets = [for k, v in local.azs : cidrsubnet(local.vpc_cidr, 4, k)]
+  public_subnets  = [for k, v in local.azs : cidrsubnet(local.vpc_cidr, 8, k + 48)]
+  intra_subnets   = [for k, v in local.azs : cidrsubnet(local.vpc_cidr, 8, k + 52)]
 
   enable_nat_gateway = true
-
   single_nat_gateway = true
 
-  enable_dns_hostnames = true
-
-  tags = {
-    Terraform = "true"
-  }
-
+  public_subnet_tags = {
+  "kubernetes.io/role/elb"                     = 1
+  "kubernetes.io/cluster/${local.name}" = "shared"
 }
 
-module "eks" {
-
-  source = "terraform-aws-modules/eks/aws"
-
-  version = "20.15.0"
-
-  cluster_name = var.cluster_name
-
-  cluster_version = var.cluster_version
-
-  cluster_endpoint_public_access = true
-
-  vpc_id = module.vpc.vpc_id
-
-  subnet_ids = module.vpc.private_subnets
-
-  eks_managed_node_groups = {
-  default = {
-    instance_types = ["t3.small"]
-
-    desired_size = 1
-    min_size     = 1
-    max_size     = 1
-  }
+private_subnet_tags = {
+  "kubernetes.io/role/internal-elb"            = 1
+  "kubernetes.io/cluster/${local.name}" = "shared"
 }
 
-  tags = {
-    Terraform = "true"
-  }
-
+  tags = local.tags
 }
